@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,37 +7,72 @@ using System.Threading.Tasks;
 
 public class BankAccount
 {
-
+    public long AccountNumber { get; set; }
+    public decimal Balance { get; set; }
+    public string OwnerName { get; set; }
 }
 
 public class Bank
 {
-    private Dictionary<int, decimal> accounts;
+    private List<BankAccount> accounts;
+    private string dataFilePath;
 
     public Bank()
     {
-        accounts = new Dictionary<int, decimal>();
+        this.dataFilePath = dataFilePath;
+        accounts = LoadAccountsFromJson();
     }
 
-    public void OpenAccount(int accountNumber, decimal initialBalance = 0)
+    //Загрузка файла с клиентской базой
+    private List<BankAccount> LoadAccountsFromJson()
     {
-        if (accounts.ContainsKey(accountNumber))
+        if (File.Exists(dataFilePath))
         {
-            Console.WriteLine("Account already exists with the given account number.");
+            string jsonData = File.ReadAllText(dataFilePath);
+            return JsonConvert.DeserializeObject<List<BankAccount>>(jsonData);
+        }
+        return new List<BankAccount>();
+    }
+
+    //Сохранение последней операции - обновление состояния счета
+    private void SaveAccountsToJson()
+    {
+        string jsonData = JsonConvert.SerializeObject(accounts, Formatting.Indented);
+        File.WriteAllText(dataFilePath, jsonData);
+    }
+
+    //Создать счет
+
+    public void OpenAccount(int accountNumber, string ownerName)
+    {
+        if (accounts.Exists(acc => acc.AccountNumber == accountNumber))
+        {
+            Console.WriteLine("Account already exists with the given account number."); //Ошибка
         }
         else
         {
-            accounts.Add(accountNumber, initialBalance);
-            Console.WriteLine($"Account {accountNumber} opened with initial balance: {initialBalance}.");
+            BankAccount newAccount = new BankAccount
+            {
+                AccountNumber = accountNumber,
+                OwnerName = ownerName,
+                Balance = 0
+            };
+            accounts.Add(newAccount);
+            SaveAccountsToJson();
+            Console.WriteLine($"Account {accountNumber} created for {ownerName}.");
         }
     }
 
-    public void Deposit(int accountNumber, decimal amount)
+    //Пополнить счет
+
+    public void Deposit(long accountNumber, decimal amount)
     {
-        if (accounts.ContainsKey(accountNumber))
+        BankAccount account = FindAccount(accountNumber);
+        if (account != null)
         {
-            accounts[accountNumber] += amount;
-            Console.WriteLine($"Deposited {amount} into account {accountNumber}. Current balance: {accounts[accountNumber]}");
+            account.Balance += amount;
+            SaveAccountsToJson();
+            Console.WriteLine($"Deposited {amount} into account {accountNumber}. Current balance: {account.Balance}");
         }
         else
         {
@@ -44,18 +80,22 @@ public class Bank
         }
     }
 
-    public void Withdraw(int accountNumber, decimal amount)
+    //Снять со счета
+
+    public void Withdraw(long accountNumber, decimal amount)
     {
-        if (accounts.ContainsKey(accountNumber))
+        BankAccount account = FindAccount(accountNumber);
+        if (account != null)
         {
-            if (accounts[accountNumber] >= amount)
+            if (account.Balance >= amount)
             {
-                accounts[accountNumber] -= amount;
-                Console.WriteLine($"Withdrew {amount} from account {accountNumber}. Current balance: {accounts[accountNumber]}");
+                account.Balance -= amount;
+                SaveAccountsToJson();
+                Console.WriteLine($"Withdrew {amount} from account {accountNumber}. Current balance: {account.Balance}");
             }
             else
             {
-                Console.WriteLine("Insufficient funds.");
+                Console.WriteLine("Insufficient funds."); //Ошибка: Недостаточно средств на счете
             }
         }
         else
@@ -64,14 +104,20 @@ public class Bank
         }
     }
 
-    public void Transfer(int fromAccountNumber, int toAccountNumber, decimal amount)
+    //Перевести средства
+
+    public void Transfer(long fromAccountNumber, int toAccountNumber, decimal amount)
     {
-        if (accounts.ContainsKey(fromAccountNumber) && accounts.ContainsKey(toAccountNumber))
+        BankAccount fromAccount = FindAccount(fromAccountNumber);
+        BankAccount toAccount = FindAccount(toAccountNumber);
+
+        if (fromAccount != null && toAccountNumber != null)
         {
-            if (accounts[fromAccountNumber] >= amount)
+            if (fromAccount.Balance >= amount)
             {
-                accounts[fromAccountNumber] -= amount;
-                accounts[toAccountNumber] += amount;
+                fromAccount.Balance -= amount;
+                toAccount.Balance += amount;
+                SaveAccountsToJson();
                 Console.WriteLine($"Transferred {amount} from account {fromAccountNumber} to account {toAccountNumber}.");
             }
             else
@@ -85,15 +131,44 @@ public class Bank
         }
     }
 
-    public void PrintAccountBalance(int accountNumber)
+    //Показать состояние счета
+
+    public void PrintAccountBalance(long accountNumber)
     {
-        if (accounts.ContainsKey(accountNumber))
+        BankAccount account = FindAccount(accountNumber);
+        if (account != null)
         {
-            Console.WriteLine($"Account {accountNumber} balance: {accounts[accountNumber]}");
+            Console.WriteLine($"Account Number : {account.AccountNumber}");
+            Console.WriteLine($"Owner Name: {account.OwnerName}");
+            Console.WriteLine($"Balance: {account.Balance}");
         }
         else
         {
             Console.WriteLine("Account not found.");
         }
+    }
+
+    //Удалить счет
+
+    public void DeleteAccount(long accountNumber)
+    {
+        BankAccount account = FindAccount(accountNumber);
+        if (account != null)
+        {
+            accounts.Remove(account);
+            SaveAccountsToJson();
+            Console.WriteLine($"Amount {accountNumber} removed.");
+        }
+        else
+        {
+            Console.WriteLine("Account not found.");
+        }
+    }
+
+    //Поиск карты в коллекции accounts по заданному номеру
+
+    private BankAccount FindAccount(long accountNumber)
+    {
+        return accounts.Find(acc => acc.AccountNumber == accountNumber); //лямбда-выражение
     }
 }
