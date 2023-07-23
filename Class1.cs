@@ -17,7 +17,7 @@ public class Bank
     private List<BankAccount> accounts;
     private string dataFilePath;
 
-    public Bank()
+    public Bank(string dataFilePath)
     {
         this.dataFilePath = dataFilePath;
         accounts = LoadAccountsFromJson();
@@ -43,7 +43,7 @@ public class Bank
 
     //Создать счет
 
-    public void OpenAccount(int accountNumber, string ownerName)
+    public void OpenAccount(long accountNumber, string ownerName)
     {
         if (accounts.Exists(acc => acc.AccountNumber == accountNumber))
         {
@@ -106,12 +106,12 @@ public class Bank
 
     //Перевести средства
 
-    public void Transfer(long fromAccountNumber, int toAccountNumber, decimal amount)
+    public void Transfer(long fromAccountNumber, long toAccountNumber, decimal amount)
     {
         BankAccount fromAccount = FindAccount(fromAccountNumber);
         BankAccount toAccount = FindAccount(toAccountNumber);
 
-        if (fromAccount != null && toAccountNumber != null)
+        if (fromAccount != null && toAccount != null)
         {
             if (fromAccount.Balance >= amount)
             {

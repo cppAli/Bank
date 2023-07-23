@@ -1,4 +1,5 @@
-﻿class Program
+﻿
+class Program
 {
     static long GetUserInputlong(string message)
     {
@@ -51,6 +52,7 @@
                 {
                     case 1:
                         long accountNumber = GetUserInputlong("Enter account new number : ");
+                        Console.WriteLine("Enter Your Name");
                         string ownerName = Console.ReadLine();
 
                         bank.OpenAccount(accountNumber, ownerName);
